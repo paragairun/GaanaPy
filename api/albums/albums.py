@@ -18,17 +18,18 @@ class Albums:
         album_info = await self.get_album_info(album_ids, False)
         return album_info
 
-    async def get_album_info(self, album_id: list, info: bool) -> list:
+    async def _fetch_and_format_album(self, album_id: str) -> dict:
         aiohttp = self.aiohttp
         endpoints = self.api_endpoints
-        album_info = []
+        response = await aiohttp.post(endpoints.album_details_url + album_id)
+        result = await response.json()
+        return await self.format_json_albums(result)
+
+    async def get_album_info(self, album_id: list, info: bool) -> list:
         if info == True:
             self.info = True
-        for i in album_id:
-          response = await aiohttp.post(endpoints.album_details_url + i)
-          result = await response.json()
-          album_info.extend(await asyncio.gather(*[self.format_json_albums(result) for i in range(0,1)]))
-        return album_info
+        album_info = await asyncio.gather(*[self._fetch_and_format_album(i) for i in album_id])
+        return list(album_info)
 
     async def get_album_tracks(self, album_id: list) -> list:
         aiohttp = self.aiohttp
