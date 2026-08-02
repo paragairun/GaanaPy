@@ -3,7 +3,7 @@ from fastapi.openapi.utils import get_openapi
 from api.gaanapy import GaanaPy
 from typing import Optional
 
-app = FastAPI()
+app = FastAPI(redirect_slashes=False)
 gaanapy = None
 
 @app.on_event("startup")
