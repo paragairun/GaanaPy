@@ -18,23 +18,18 @@ class Songs:
         track_info = await self.get_track_info(track_ids)
         return track_info
 
-    async def get_track_info(self, track_id: list) -> list:
+    async def _fetch_and_format_track(self, track_id: str) -> list:
+        aiohttp = self.aiohttp
         endpoints = self.api_endpoints
-        errors = self.errors
-        results = await asyncio.gather(*[
-            self._safe_request("POST", endpoints.song_details_url + i)
-            for i in track_id
-        ])
+        response = await aiohttp.post(endpoints.song_details_url + track_id)
+        result = await response.json()
+        return await asyncio.gather(*[self.format_json_songs(i) for i in result['tracks']])
+
+    async def get_track_info(self, track_id: list) -> list:
         track_info = []
-        for result in results:
-            if isinstance(result, dict) and "error" in result:
-                continue
-            tracks = result.get('tracks')
-            if not tracks:
-                continue
-            track_info.extend(await asyncio.gather(*[self.format_json_songs(t) for t in tracks]))
-        if len(track_info) == 0:
-            return await errors.no_results()
+        results = await asyncio.gather(*[self._fetch_and_format_track(i) for i in track_id])
+        for r in results:
+          track_info.extend(r)
         return track_info
 
     async def format_json_songs(self, results: dict) -> dict:
