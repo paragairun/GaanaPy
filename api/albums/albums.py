@@ -19,21 +19,18 @@ class Albums:
         album_info = await self.get_album_info(album_ids, False)
         return album_info
 
-    async def get_album_info(self, album_id: list, info: bool) -> list:
+    async def _fetch_and_format_album(self, album_id: str) -> dict:
+        aiohttp = self.aiohttp
         endpoints = self.api_endpoints
-        errors = self.errors
-        results = await asyncio.gather(*[
-            self._safe_request("POST", endpoints.album_details_url + i)
-            for i in album_id
-        ])
-        album_info = []
-        for result in results:
-            if isinstance(result, dict) and "error" in result:
-                continue
-            album_info.append(await self.format_json_albums(result, info=info))
-        if len(album_info) == 0:
-            return await errors.no_results()
-        return album_info
+        response = await aiohttp.post(endpoints.album_details_url + album_id)
+        result = await response.json()
+        return await self.format_json_albums(result)
+
+    async def get_album_info(self, album_id: list, info: bool) -> list:
+        if info == True:
+            self.info = True
+        album_info = await asyncio.gather(*[self._fetch_and_format_album(i) for i in album_id])
+        return list(album_info)
 
     async def get_album_tracks(self, album_id: str) -> list:
         endpoints = self.api_endpoints
